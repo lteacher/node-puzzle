@@ -1,20 +1,22 @@
 fs = require 'fs'
-
+readline = require 'readline'
 
 exports.countryIpCounter = (countryCode, cb) ->
   return cb() unless countryCode
 
-  fs.readFile "#{__dirname}/../data/geo.txt", 'utf8', (err, data) ->
-    if err then return cb err
+  stream = _getReadStream "#{__dirname}/../data/geo.txt"
+  counter = 0
 
-    data = data.toString().split '\n'
-    counter = 0
+  rl = readline.createInterface { input: stream }
 
-    for line in data when line
-      line = line.split '\t'
-      # GEO_FIELD_MIN, GEO_FIELD_MAX, GEO_FIELD_COUNTRY
-      # line[0],       line[1],       line[3]
+  rl.on 'line', (input) -> counter += _parseLine countryCode, input
 
-      if line[3] == countryCode then counter += +line[1] - +line[0]
+  stream.on 'end', () -> cb null, counter
 
-    cb null, counter
+# Get ReadStream for the file
+_getReadStream = (file) -> fs.createReadStream file
+
+# Get the counter increment for the given line
+_parseLine = (code,line) ->
+  [min,max,range,country] = line.split '\t'
+  return if country == code then +max - +min else 0
